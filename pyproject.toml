@@ -1,10 +1,9 @@
 [tool.poetry]
-name = "python-2022"
+name = "theory-practice"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Brendan Richards <quend00@gmail.com>"]
 readme = "README.md"
-packages = [{include = "python_2022"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
