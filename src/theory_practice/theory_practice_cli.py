@@ -3,119 +3,165 @@ import random
 import os
 import toml
 
-from constants import CHROMATICS, INTERVALS, CONFIG_DIRS, TheoryMode
+from constants import CHROMATICS, INTERVALS, CONFIG_DIRS, THEORY_MODES
 
 
-def validate_config(config_: Dict, mode_: str) -> bool:
-    if mode_ == 'i':
-        if 'intervals' not in config_.keys() or 'directions' not in config_.keys() or 'roots' not in config_.keys():
-            raise ValueError(f'Malformed config: {config_}')
-        if set(config_['intervals']) - set(INTERVALS.keys()):
-            raise ValueError('Unexpected intervals found in config')
-        if len(config_['intervals']) != len(config_['directions']):
-            raise ValueError('Config should have same number of directions and intervals')
-        if set(config_['directions']) - {'a', 'd', 'a/d'}:
-            raise ValueError('Unexpected directions found in config')
-        if set(config_['roots']) - set([y for x in CHROMATICS for y in x]):
-            if config_['roots'] != ['naturals'] \
-                and config_['roots'] != ['accidentals'] \
-                and config_['roots'] != ['flats'] \
-                and config_['roots'] != ['sharps'] \
-                and config_['roots'] != [] \
-                or len(config_['roots']) > 1: 
-                raise ValueError('Unexpected roots found in config')
-    elif mode_ == 'c':
-        # TODO: implement chord mode config validation
-        pass
+class TheoryTeacher:
+    def __init__(self):
+        self.mode = self.get_theory_mode()
+        self.config = self.get_config()
+        self.roots = self.get_roots()
+        self.root_ids = list(
+            {
+                idx
+                for idx, r_list in enumerate(CHROMATICS)
+                for note in r_list
+                if note in self.roots
+            }
+        )
+        if self.mode == "Intervals":
+            self.interval_directions = {
+                ivl: dctn
+                for ivl, dctn in zip(
+                    self.config["intervals"], self.config["directions"]
+                )
+            }
 
-def get_roots(config_: Dict) -> List[str]:
-    roots_ = config_['roots']
-    possible_notes_ = [y for x in CHROMATICS for y in x]
+    def get_theory_mode(self):
+        os.system("cls" if os.name == "nt" else "clear")
+        indexed_modes = {
+            str(idx): theory_mode for idx, theory_mode in enumerate(THEORY_MODES)
+        }
+        mode_display_string = "".join(
+            [str(idx) + ") " + m + "\n" for idx, m in indexed_modes.items()]
+        )
 
-    if roots_ == []:
-        return possible_notes_
-    elif roots_ == ['naturals']:
-        return [x for x in possible_notes_ if 'b' not in x and '#' not in x]
-    elif roots_ == ['accidentals']:
-        return [x for x in possible_notes_ if 'b' in x or '#' in x]
-    elif roots_ == ['flats']:
-        return [x for x in possible_notes_ if 'b' in x]
-    elif roots_ == ['sharps']:
-        return [x for x in possible_notes_ if '#' in x]
-    else:
-        return roots_
+        mode_idx = input(f"{mode_display_string}\nEnter mode number:")
+        while mode_idx not in indexed_modes.keys():
+            mode_idx = input(
+                f"Invalid input, \n{mode_display_string}\nEnter mode number:"
+            )
 
+        return indexed_modes[mode_idx]
 
+    def get_config(self):
+        possible_configs = {
+            str(idx): c for idx, c in enumerate(os.listdir(CONFIG_DIRS[self.mode]))
+        }
+        if len(possible_configs) == 0:
+            raise ValueError(f"No configs available for mode: {self.mode}")
 
+        choice_string = "".join(
+            [str(idx) + ") " + c + "\n" for idx, c in possible_configs.items()]
+        )
 
-def run_cli():
-    # cli interface
-    os.system('cls' if os.name == 'nt' else 'clear')
-    indexed_modes = {str(idx): theory_mode.value for idx, theory_mode in enumerate(TheoryMode)}
-    mode_display_string = ''.join([str(idx) + ") " + m + "\n" for idx, m in indexed_modes.items()])
-    mode_choice = input(f'{mode_display_string}\nEnter mode number:')
-    while mode_choice not in indexed_modes.keys():
-        mode_choice = input(f'Invalid input, \n{mode_display_string}\nEnter mode number:')
+        config_num = input(f"\n{choice_string}\nEnter config number:")
+        while config_num not in possible_configs.keys():
+            config_num = input(f"Invalid input, \n{choice_string}\nEnter config num:")
 
-    # if
-    possible_configs = {str(idx): c for idx, c in enumerate(os.listdir(CONFIG_DIR))}
-    for root, directories, filenames in os.walk(CONFIG_DIR): 
-        for filename in filenames:  
-            print(os.path.join(root,filename))
+        with open(
+            os.path.join(CONFIG_DIRS[self.mode], possible_configs[config_num]), "r"
+        ) as f:
+            config = toml.load(f)
+            config = self.validate_config(config)
+        return config
 
-    choice_string = ''.join([str(idx) + ") " + c + "\n" for idx, c in possible_configs.items()])
+    def validate_config(self, config: Dict) -> bool:
+        if self.mode == "Intervals":
+            if (
+                "intervals" not in config.keys()
+                or "directions" not in config.keys()
+                or "roots" not in config.keys()
+            ):
+                raise ValueError(f"Malformed config: {config}")
+            if set(config["intervals"]) - set(INTERVALS.keys()):
+                raise ValueError("Unexpected intervals found in config")
+            if len(config["intervals"]) != len(config["directions"]):
+                raise ValueError(
+                    "Config should have same number of directions and intervals"
+                )
+            if set(config["directions"]) - {"a", "d", "a/d"}:
+                raise ValueError("Unexpected directions found in config")
+            if set(config["roots"]) - set([y for x in CHROMATICS for y in x]):
+                if (
+                    config["roots"] != ["naturals"]
+                    and config["roots"] != ["accidentals"]
+                    and config["roots"] != ["flats"]
+                    and config["roots"] != ["sharps"]
+                    and config["roots"] != []
+                    or len(config["roots"]) > 1
+                ):
+                    raise ValueError("Unexpected roots found in config")
+        elif self.mode == "Chord Spelling":
+            # TODO: implement chord mode config validation
+            pass
 
-    config_num = input(f'{choice_string}\nEnter config number:')
-    while config_num not in possible_configs.keys():
-        config_num = input(f'Invalid input, \n{choice_string}\nEnter config num:')
+        return config
 
-    with open(os.path.join(CONFIG_DIR, possible_configs[config_num]), 'r') as f:
-        config = toml.load(f)
-        validate_config(config, mode)
-        roots = get_roots(config)
-        root_ids = list({idx for idx, r_list in enumerate(CHROMATICS) for note in r_list if note in roots})
-        if mode == '0':
-            interval_directions = {ivl: dctn for ivl, dctn in zip(config['intervals'], config['directions'])}
+    def get_roots(self) -> List[str]:
+        roots = self.config["roots"]
+        possible_notes = [y for x in CHROMATICS for y in x]
 
-    quit = False
-    correct = 0
-    total = 0
-    os.system('cls' if os.name == 'nt' else 'clear')
-    while not quit:
-        if mode == '0':
-            root_id = random.choice(root_ids)
-            root = random.choice([x for x in CHROMATICS[root_id] if x in roots])
-            interval = random.choice(config['intervals'])
-            possible_directions = interval_directions[interval].split('/')
-            direction = random.choice(possible_directions)
-            if direction == 'a':
-                ans = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
+        if roots == []:
+            return possible_notes
+        elif roots == ["naturals"]:
+            return [x for x in possible_notes if "b" not in x and "#" not in x]
+        elif roots == ["accidentals"]:
+            return [x for x in possible_notes if "b" in x or "#" in x]
+        elif roots == ["flats"]:
+            return [x for x in possible_notes if "b" in x]
+        elif roots == ["sharps"]:
+            return [x for x in possible_notes if "#" in x]
+        else:
+            return roots
+
+    def run_cli(self):
+        quit = False
+        correct = 0
+        total = 0
+        os.system("cls" if os.name == "nt" else "clear")
+        while not quit:
+            if self.mode == "Intervals":
+                root_id = random.choice(self.root_ids)
+                root = random.choice(
+                    [x for x in CHROMATICS[root_id] if x in self.roots]
+                )
+                interval = random.choice(self.config["intervals"])
+                possible_directions = self.interval_directions[interval].split("/")
+                direction = random.choice(possible_directions)
+                if direction == "a":
+                    ans = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
+                else:
+                    ans = CHROMATICS[(root_id - INTERVALS[interval])]
+
+                guess = input(
+                    f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}\n'
+                )
+                if guess in ans:
+                    print("Correct!\n")
+                    if len(ans) > 1:
+                        print(f"Also correct: {[x for x in ans if x != guess]}")
+                    correct += 1
+                else:
+                    print(f"Wrong!\nCorrect answers were: {ans}")
+
+                inp = input("hit enter to continue \n")
+                if inp not in {""}:
+                    quit = True
+
+                os.system("cls" if os.name == "nt" else "clear")
+
+            elif self.mode == "Chord Spelling":
+                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
+            elif self.mode == "Guitar Triads":
+                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
             else:
-                ans = CHROMATICS[(root_id - INTERVALS[interval])]
+                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
 
-            guess = input(f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}\n')
-            if guess in ans:
-                print('Correct!\n')
-                if len(ans) > 1:
-                    print(f'Also correct: {[x for x in ans if x != guess]}')
-                correct += 1
-            else:
-                print(f'Wrong!\nCorrect answers were: {ans}')
+            total += 1
 
-            inp = input('hit enter to continue \n')
-            if inp not in {''}:
-                quit = True
-
-            os.system('cls' if os.name == 'nt' else 'clear')
-
-        elif mode == '1':
-            print('chord mode not implemented')
-            quit = True
-
-        total += 1
-
-    print(f'Final Score: {100*(correct / total)}% correct')
+        print(f"Final Score: {100*(correct / total)}% correct")
 
 
-if __name__ == '__main__':
-    run_cli()
+if __name__ == "__main__":
+    TheoryTeacher().run_cli()
