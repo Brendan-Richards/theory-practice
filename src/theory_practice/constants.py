@@ -1,10 +1,10 @@
-THEORY_MODES = {"Intervals", "Chord Spelling", "Guitar Triads"}
-
 CONFIG_DIRS = {
     "Intervals": "configs/intervals",
     "Chord Spelling": "configs/chord_spelling",
     "Guitar Triads": "configs/triads",
 }
+
+THEORY_MODES = set(CONFIG_DIRS.keys())
 
 CHROMATICS = [
     ["A"],
