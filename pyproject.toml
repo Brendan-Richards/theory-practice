@@ -9,6 +9,7 @@ readme = "README.md"
 python = "^3.10"
 toml = "^0.10.2"
 black = "^23.3.0"
+flask = "^3.0.3"
 
 
 [build-system]
