@@ -3,30 +3,42 @@ import random
 import os
 import toml
 
-from constants import CHROMATICS, INTERVALS, CONFIG_DIRS, THEORY_MODES, TRIAD_FORMULAS
+from theory_practice.constants import CHROMATICS, INTERVALS, CONFIG_DIRS, THEORY_MODES, TRIAD_FORMULAS
 
 
 class TheoryTeacher:
     def __init__(self):
-        self.mode = self.get_theory_mode()
-        self.config = self.get_config()
-        self.roots = self.get_roots()
-        self.root_ids = list(
-            {
-                idx
-                for idx, r_list in enumerate(CHROMATICS)
-                for note in r_list
-                if note in self.roots
-            }
-        )
-        if self.mode == "Intervals":
-            self.interval_directions = {
-                ivl: dctn
-                for ivl, dctn in zip(
-                    self.config["intervals"], self.config["directions"]
-                )
-            }
+        pass
+        # self.mode = self.get_theory_mode()
+        # self.config = self.get_config()
+        # self.roots = self.get_roots()
+        # self.root_ids = list(
+        #     {
+        #         idx
+        #         for idx, r_list in enumerate(CHROMATICS)
+        #         for note in r_list
+        #         if note in self.roots
+        #     }
+        # )
+        # if self.mode == "Intervals":
+        #     self.interval_directions = {
+        #         ivl: dctn
+        #         for ivl, dctn in zip(
+        #             self.config["intervals"], self.config["directions"]
+        #         )
+        #     }
 
+    def generate_question(self):
+        if self.mode == "Intervals":
+            return self.generate_interval_question()
+        elif self.mode == "Guitar Triads":
+            return self.generate_guitar_triad_question()
+        else:
+            raise NotImplementedError(f"Mode {self.mode} is not supported!")
+
+
+
+    # TODO: fix
     def get_theory_mode(self):
         os.system("cls" if os.name == "nt" else "clear")
         indexed_modes = {
@@ -44,6 +56,7 @@ class TheoryTeacher:
 
         return indexed_modes[mode_idx]
 
+    # TODO: fix
     def get_config(self):
         possible_configs = {
             str(idx): c for idx, c in enumerate(os.listdir(CONFIG_DIRS[self.mode]))
@@ -257,5 +270,5 @@ class TheoryTeacher:
         print(f"Final Score: {100*(correct / total)}% correct")
 
 
-if __name__ == "__main__":
-    TheoryTeacher().run_cli()
+# if __name__ == "__main__":
+    # TheoryTeacher().run_cli()
