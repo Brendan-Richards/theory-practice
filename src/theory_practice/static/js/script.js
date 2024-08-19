@@ -1,64 +1,74 @@
 document.addEventListener('DOMContentLoaded', () => {
     function loadQuestion() {
-        fetch('/get-question')
+        return fetch('/get-question')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('flashcard').textContent = generateQuestionText(data);
+                flashcard_container = document.getElementById('flashcard-container');
+                flashcard_container.innerHTML = "";
+                data.question.split("\n").forEach(line => {
+                    flashcard_container.appendChild(document.createTextNode(line))
+                    flashcard_container.appendChild(document.createElement("br"))
+                });
                 document.getElementById('submit-answer').onclick = () => submitAnswer(data);
-                document.getElementById('theory-mode').onchange = () => fillConfigOptions(data);
             });
     }
 
-    function generateQuestionText(data) {
-        // print("in generateQuestionText", data)
-        return "question text 2"
-        // if (data.type === 'Interval') {
-        //     return `Root: ${data.root}\nInterval: ${data.interval}\nDirection: ${data.direction === 'a' ? 'Ascending' : 'Descending'}`;
-        // }
-        // Add more cases for other types
+    function setTheoryMode() {
+        var modeSelection = document.getElementById("theory-mode").value;
+        return fetch(`/set-theory-mode/${modeSelection}`, {method: 'GET'});
+    }
+
+    function fillConfigOptions() {
+        var modeSelection = document.getElementById("theory-mode").value;
+        return fetch(`/get-configs/${modeSelection}`, {method: 'GET'})
+        .then(response => response.json())
+        .then(data => {
+            cfg_dropdown_ele = document.getElementById("config");
+            cfg_dropdown_ele.length = 0;
+            data.forEach(element => {
+                var option = document.createElement('option');
+                option.text = option.value = element
+                cfg_dropdown_ele.options.add(option)
+            });
+        });
+    }
+
+    function loadConfig() {
+        var configSelection = document.getElementById("config").value;
+        return fetch(`/load-config/${configSelection}`, {method: 'GET'});
+    }
+
+    async function theoryModeInit() {
+        await setTheoryMode();
+        await fillConfigOptions();
+        await loadConfig();
+        await loadQuestion();
+    }
+
+    async function configInit() {
+        await loadConfig();
+        await loadQuestion();
     }
 
     function submitAnswer(questionData) {
         const guess = document.getElementById('answer-input').value;
-        fetch('/submit-answer', {
+        return fetch('/submit-answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ guess: guess, question_data: questionData })
+            body: JSON.stringify({ guess: guess, answer: questionData.answer })
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.correct) {
-                    alert('Correct!');
-                } else {
-                    alert('Incorrect!');
-                }
-                loadQuestion();
-            });
-    }
-
-    function fillConfigOptions() {
-        // fetch('/get-configs')
-        // .then(response => response.json())
-        // .then(data => {
-        //     // var select = document.getElementById("year");
-        //     alert(data)
-
-        //     // document.getElementById('flashcard').textContent = generateQuestionText(data);
-        //     // document.getElementById('submit-answer').onclick = () => submitAnswer(data);
-        // });
-        
-        var modeSelection = document.getElementById("theory-mode").value;
-        alert("filling config options");
-        alert(modeSelection);
-
-        fetch(`/get-configs/${modeSelection}`, {method: 'GET'})
         .then(response => response.json())
         .then(data => {
-            alert(data)
+            alert(data.feedback)
+            document.getElementById('correct').innerText = `Correct: ${data.correct}`
+            document.getElementById('total').innerText = `Total: ${data.total}`
+            var percent = Math.round((data.correct / data.total) * 100)
+            document.getElementById('percentage').innerText = `${percent}% Correct`
+            loadQuestion();
         });
-        
     }
 
-    fillConfigOptions();
-    loadQuestion();
+    theoryModeInit()
+    document.getElementById('theory-mode').onchange = theoryModeInit;
+    document.getElementById('config').onchange = configInit;
 });

@@ -1,4 +1,0 @@
-low_strings = ['e', 'a', 'd', 'g']
-roots = []
-chord_types = ['m', 'M', 'dim', 'aug']
-inversions = [0, 1, 2]

@@ -3,81 +3,43 @@ import random
 import os
 import toml
 
-from theory_practice.constants import CHROMATICS, INTERVALS, CONFIG_DIRS, THEORY_MODES, TRIAD_FORMULAS
+from theory_practice.constants import CHROMATICS, INTERVALS, THEORY_MODES, TRIAD_FORMULAS
 
 
 class TheoryTeacher:
     def __init__(self):
-        pass
-        # self.mode = self.get_theory_mode()
-        # self.config = self.get_config()
-        # self.roots = self.get_roots()
-        # self.root_ids = list(
-        #     {
-        #         idx
-        #         for idx, r_list in enumerate(CHROMATICS)
-        #         for note in r_list
-        #         if note in self.roots
-        #     }
-        # )
-        # if self.mode == "Intervals":
-        #     self.interval_directions = {
-        #         ivl: dctn
-        #         for ivl, dctn in zip(
-        #             self.config["intervals"], self.config["directions"]
-        #         )
-        #     }
+        self.correct = 0
+        self.total = 0
 
-    def generate_question(self):
-        if self.mode == "Intervals":
-            return self.generate_interval_question()
-        elif self.mode == "Guitar Triads":
-            return self.generate_guitar_triad_question()
-        else:
-            raise NotImplementedError(f"Mode {self.mode} is not supported!")
+    def set_theory_mode(self, theory_mode: str):
+        self.correct = 0
+        self.total = 0
+        self.mode = theory_mode
 
+    def load_config(self, config_name: str):
+        config_path = os.path.join("configs", self.mode, f"{config_name}.toml")
 
-
-    # TODO: fix
-    def get_theory_mode(self):
-        os.system("cls" if os.name == "nt" else "clear")
-        indexed_modes = {
-            str(idx): theory_mode for idx, theory_mode in enumerate(THEORY_MODES)
-        }
-        mode_display_string = "".join(
-            [str(idx) + ") " + m + "\n" for idx, m in indexed_modes.items()]
-        )
-
-        mode_idx = input(f"{mode_display_string}\nEnter mode number:")
-        while mode_idx not in indexed_modes.keys():
-            mode_idx = input(
-                f"Invalid input, \n{mode_display_string}\nEnter mode number:"
-            )
-
-        return indexed_modes[mode_idx]
-
-    # TODO: fix
-    def get_config(self):
-        possible_configs = {
-            str(idx): c for idx, c in enumerate(os.listdir(CONFIG_DIRS[self.mode]))
-        }
-        if len(possible_configs) == 0:
-            raise ValueError(f"No configs available for mode: {self.mode}")
-
-        choice_string = "".join(
-            [str(idx) + ") " + c + "\n" for idx, c in possible_configs.items()]
-        )
-
-        config_num = input(f"\n{choice_string}\nEnter config number:")
-        while config_num not in possible_configs.keys():
-            config_num = input(f"Invalid input, \n{choice_string}\nEnter config num:")
-
-        with open(
-            os.path.join(CONFIG_DIRS[self.mode], possible_configs[config_num]), "r"
-        ) as f:
+        with open(config_path, "r") as f:
             config = toml.load(f)
             config = self.validate_config(config)
-        return config
+        self.config = config
+
+        self.roots = self.get_roots()
+        self.root_ids = list(
+            {
+                idx
+                for idx, r_list in enumerate(CHROMATICS)
+                for note in r_list
+                if note in self.roots
+            }
+        )
+        if self.mode == "intervals":
+            self.interval_directions = {
+                ivl: dctn
+                for ivl, dctn in zip(
+                    self.config["intervals"], self.config["directions"]
+                )
+            }
 
     def validate_config(self, config: Dict) -> bool:
         if self.mode == "Intervals":
@@ -204,71 +166,62 @@ class TheoryTeacher:
                 if note == n2:
                     return i - idx1
 
-    def run_cli(self):
-        quit = False
-        correct = 0
-        total = 0
-        os.system("cls" if os.name == "nt" else "clear")
-        while not quit:
-            if self.mode == "Intervals":
-                root_id = random.choice(self.root_ids)
-                root = random.choice(
-                    [x for x in CHROMATICS[root_id] if x in self.roots]
-                )
-                interval = random.choice(self.config["intervals"])
-                possible_directions = self.interval_directions[interval].split("/")
-                direction = random.choice(possible_directions)
-                if direction == "a":
-                    ans = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
-                else:
-                    ans = CHROMATICS[(root_id - INTERVALS[interval])]
+    def generate_question(self):
+        if self.mode == "intervals":
+            return self.generate_interval_question()
+        elif self.mode == "guitar_triads":
+            return self.generate_guitar_triad_question()
+        else:
+            raise NotImplementedError(f"Mode {self.mode} is not supported!")
 
-                guess = input(
-                    f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}\n'
-                )
-                if guess in ans:
-                    print("Correct!\n")
-                    if len(ans) > 1:
-                        print(f"Also correct: {[x for x in ans if x != guess]}")
-                    correct += 1
-                else:
-                    print(f"Wrong!\nCorrect answers were: {ans}")
+    def generate_interval_question(self):
+        root_id = random.choice(self.root_ids)
+        root = random.choice(
+            [x for x in CHROMATICS[root_id] if x in self.roots]
+        )
+        interval = random.choice(self.config["intervals"])
+        possible_directions = self.interval_directions[interval].split("/")
+        direction = random.choice(possible_directions)
+        if direction == "a":
+            answer = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
+        else:
+            answer = CHROMATICS[(root_id - INTERVALS[interval])]
 
-                inp = input("hit enter to continue \n")
-                if inp not in {""}:
-                    quit = True
+        question_text = f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}'
+        return {"question": question_text, "answer": answer}
 
-                os.system("cls" if os.name == "nt" else "clear")
+    def grade(self, data: dict):
+        guess, answer = data["guess"], data["answer"]
+        results = {}
 
-            elif self.mode == "Chord Spelling":
-                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
-
-            elif self.mode == "Guitar Triads":
-                root_id = random.choice(self.root_ids)
-                root = random.choice(
-                    [x for x in CHROMATICS[root_id] if x in self.roots]
-                )
-                low_string = random.choice(self.config["low_strings"])
-                inversion = random.choice(self.config["inversions"])
-                chord_type = random.choice(self.config["chord_types"])
-                chord_tab = self.get_chord_tab(
-                    low_string, inversion, chord_type, root_id
-                )
-                input(
-                    f"Low String: {low_string.upper()} \nInversion: {inversion}\nChord Name: {root + chord_type}\n\nhit enter for answer \n"
-                )
-
-                print(f"\n{chord_tab}\n")
-                inp = input("hit enter to continue \n")
-                os.system("cls" if os.name == "nt" else "clear")
-
+        if self.mode == "intervals":
+            correct = guess in answer
+            if correct:
+                alt_answers = list(set(answer) - set([guess]))
+                feedback = f"Correct, also would've accepted: {alt_answers}" if alt_answers else "Correct"
+                self.correct += 1
             else:
-                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
+                feedback = f"Incorrect, the answer was {answer}"
 
-            total += 1
+        elif self.mode == "guitar_triads":
+            feedback = f"Answer was:\n{answer}"
 
-        print(f"Final Score: {100*(correct / total)}% correct")
+        self.total += 1
+        results["correct"] = self.correct
+        results["total"] = self.total
+        results["feedback"] = feedback
+        return results
 
-
-# if __name__ == "__main__":
-    # TheoryTeacher().run_cli()
+    def generate_guitar_triad_question(self):
+        root_id = random.choice(self.root_ids)
+        root = random.choice(
+            [x for x in CHROMATICS[root_id] if x in self.roots]
+        )
+        low_string = random.choice(self.config["low_strings"])
+        inversion = random.choice(self.config["inversions"])
+        chord_type = random.choice(self.config["chord_types"])
+        chord_tab = self.get_chord_tab(
+            low_string, inversion, chord_type, root_id
+        )
+        question_text = f"Low String: {low_string.upper()} \nInversion: {inversion}\nChord Name: {root + chord_type}"
+        return {"question": question_text, "answer": chord_tab}
