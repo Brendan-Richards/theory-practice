@@ -174,6 +174,9 @@ class TheoryTeacher:
         else:
             raise NotImplementedError(f"Mode {self.mode} is not supported!")
 
+    def generate_chord_spelling_question(self):
+        pass
+
     def generate_interval_question(self):
         root_id = random.choice(self.root_ids)
         root = random.choice(
@@ -223,5 +226,7 @@ class TheoryTeacher:
         chord_tab = self.get_chord_tab(
             low_string, inversion, chord_type, root_id
         )
+        # display with + and ° notation for readability
+        chord_type = chord_type.replace("dim", "°").replace("aug", "+")
         question_text = f"Low String: {low_string.upper()} \nInversion: {inversion}\nChord Name: {root + chord_type}"
         return {"question": question_text, "answer": chord_tab}
