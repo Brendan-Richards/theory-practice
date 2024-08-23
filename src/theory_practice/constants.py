@@ -1,8 +1,4 @@
-THEORY_MODES = [
-    "intervals",
-    "chord_spelling",
-    "guitar_triads"
-]
+THEORY_MODES = ["intervals", "chord_spelling", "guitar_triads"]
 
 CHROMATICS = [
     ["A"],

@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     flashcard_container.appendChild(document.createElement("br"))
                 });
                 document.getElementById('submit-answer').onclick = () => submitAnswer(data);
+                document.getElementById('answer-input').value = "";
             });
     }
 
