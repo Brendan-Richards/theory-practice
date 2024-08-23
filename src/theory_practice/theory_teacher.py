@@ -3,13 +3,32 @@ import random
 import os
 import toml
 
-from constants import CHROMATICS, INTERVALS, CONFIG_DIRS, THEORY_MODES, TRIAD_FORMULAS
+from theory_practice.constants import (
+    CHROMATICS,
+    INTERVALS,
+    THEORY_MODES,
+    TRIAD_FORMULAS,
+)
 
 
 class TheoryTeacher:
     def __init__(self):
-        self.mode = self.get_theory_mode()
-        self.config = self.get_config()
+        self.correct = 0
+        self.total = 0
+
+    def set_theory_mode(self, theory_mode: str):
+        self.correct = 0
+        self.total = 0
+        self.mode = theory_mode
+
+    def load_config(self, config_name: str):
+        config_path = os.path.join("configs", self.mode, f"{config_name}.toml")
+
+        with open(config_path, "r") as f:
+            config = toml.load(f)
+            config = self.validate_config(config)
+        self.config = config
+
         self.roots = self.get_roots()
         self.root_ids = list(
             {
@@ -19,52 +38,13 @@ class TheoryTeacher:
                 if note in self.roots
             }
         )
-        if self.mode == "Intervals":
+        if self.mode == "intervals":
             self.interval_directions = {
                 ivl: dctn
                 for ivl, dctn in zip(
                     self.config["intervals"], self.config["directions"]
                 )
             }
-
-    def get_theory_mode(self):
-        os.system("cls" if os.name == "nt" else "clear")
-        indexed_modes = {
-            str(idx): theory_mode for idx, theory_mode in enumerate(THEORY_MODES)
-        }
-        mode_display_string = "".join(
-            [str(idx) + ") " + m + "\n" for idx, m in indexed_modes.items()]
-        )
-
-        mode_idx = input(f"{mode_display_string}\nEnter mode number:")
-        while mode_idx not in indexed_modes.keys():
-            mode_idx = input(
-                f"Invalid input, \n{mode_display_string}\nEnter mode number:"
-            )
-
-        return indexed_modes[mode_idx]
-
-    def get_config(self):
-        possible_configs = {
-            str(idx): c for idx, c in enumerate(os.listdir(CONFIG_DIRS[self.mode]))
-        }
-        if len(possible_configs) == 0:
-            raise ValueError(f"No configs available for mode: {self.mode}")
-
-        choice_string = "".join(
-            [str(idx) + ") " + c + "\n" for idx, c in possible_configs.items()]
-        )
-
-        config_num = input(f"\n{choice_string}\nEnter config number:")
-        while config_num not in possible_configs.keys():
-            config_num = input(f"Invalid input, \n{choice_string}\nEnter config num:")
-
-        with open(
-            os.path.join(CONFIG_DIRS[self.mode], possible_configs[config_num]), "r"
-        ) as f:
-            config = toml.load(f)
-            config = self.validate_config(config)
-        return config
 
     def validate_config(self, config: Dict) -> bool:
         if self.mode == "Intervals":
@@ -92,17 +72,22 @@ class TheoryTeacher:
                     or len(config["roots"]) > 1
                 ):
                     raise ValueError("Unexpected roots found in config")
-        elif self.mode == "Chord Spelling":
-            # TODO: implement chord mode config validation
-            pass
-        elif self.mode == "Guitar Triads":
-            expected_options = {"low_strings", "roots", "chord_types", "inversions"}
+
+        elif self.mode in ["Chord Spelling", "Guitar Triads"]:
+            if self.mode == "Guitar Triads":
+                expected_options = {"low_strings", "roots", "chord_types", "inversions"}
+                if set(config["low_strings"]) - {"e", "a", "d", "g"}:
+                    raise ValueError("Unexpected low strings found in config")
+                if set(config["inversions"]) - {0, 1, 2}:
+                    raise ValueError("Unexpected inversions found in config")
+            else:
+                expected_options = {"roots", "chord_types"}
+
             if not set(config.keys()) == expected_options:
                 raise ValueError(
                     f"Expected config to have the following options only: {expected_options}"
                 )
-            if set(config["low_strings"]) - {"e", "a", "d", "g"}:
-                raise ValueError("Unexpected low strings found in config")
+
             if set(config["roots"]) - set([y for x in CHROMATICS for y in x]):
                 if (
                     config["roots"] != ["naturals"]
@@ -115,8 +100,6 @@ class TheoryTeacher:
                     raise ValueError("Unexpected roots found in config")
             if set(config["chord_types"]) - {"m", "M", "dim", "aug"}:
                 raise ValueError("Unexpected chord types found in config")
-            if set(config["inversions"]) - {0, 1, 2}:
-                raise ValueError("Unexpected inversions found in config")
 
         return config
 
@@ -191,71 +174,95 @@ class TheoryTeacher:
                 if note == n2:
                     return i - idx1
 
-    def run_cli(self):
-        quit = False
-        correct = 0
-        total = 0
-        os.system("cls" if os.name == "nt" else "clear")
-        while not quit:
-            if self.mode == "Intervals":
-                root_id = random.choice(self.root_ids)
-                root = random.choice(
-                    [x for x in CHROMATICS[root_id] if x in self.roots]
+    def generate_question(self):
+        if self.mode == "intervals":
+            return self.generate_interval_question()
+        elif self.mode == "guitar_triads":
+            return self.generate_guitar_triad_question()
+        else:
+            return self.generate_chord_spelling_question()
+
+    def generate_chord_spelling_question(self):
+        root_id = random.choice(self.root_ids)
+        root = random.choice([x for x in CHROMATICS[root_id] if x in self.roots])
+        chord_type = random.choice(self.config["chord_types"])
+        third_choices = CHROMATICS[
+            (root_id + 3 if chord_type in ["dim", "m"] else root_id + 4) % 12
+        ]
+        fifth_choices = CHROMATICS[
+            (
+                root_id + 7
+                if chord_type in ["m", "M"]
+                else root_id + 6
+                if chord_type == "dim"
+                else root_id + 8
+            )
+            % 12
+        ]
+        if "b" in root:
+            third = sorted(third_choices, key=lambda x: 0 if "b" in x else 1)[0]
+            fifth = sorted(fifth_choices, key=lambda x: 0 if "b" in x else 1)[0]
+        else:
+            third = sorted(third_choices, key=lambda x: 0 if "#" in x else 1)[0]
+            fifth = sorted(fifth_choices, key=lambda x: 0 if "#" in x else 1)[0]
+
+        main_answer = f"{root}-{third}-{fifth}"
+        other_answers = {
+            f"{root}-{t}-{f}" for t in third_choices for f in fifth_choices
+        } - {main_answer}
+        return {
+            "question": f'{root}{chord_type.replace("dim", "°").replace("aug", "+")}',
+            "answer": [main_answer] + list(other_answers),
+        }
+
+    def generate_interval_question(self):
+        root_id = random.choice(self.root_ids)
+        root = random.choice([x for x in CHROMATICS[root_id] if x in self.roots])
+        interval = random.choice(self.config["intervals"])
+        possible_directions = self.interval_directions[interval].split("/")
+        direction = random.choice(possible_directions)
+        if direction == "a":
+            answer = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
+        else:
+            answer = CHROMATICS[(root_id - INTERVALS[interval])]
+
+        question_text = f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}'
+        return {"question": question_text, "answer": answer}
+
+    def grade(self, data: dict):
+        guess, answer = data["guess"], data["answer"]
+        results = {}
+
+        if self.mode in ["intervals", "chord_spelling"]:
+            correct = guess in answer
+            if correct:
+                alt_answers = list(set(answer) - set([guess]))
+                feedback = (
+                    f"Correct, also would've accepted: {alt_answers}"
+                    if alt_answers
+                    else "Correct"
                 )
-                interval = random.choice(self.config["intervals"])
-                possible_directions = self.interval_directions[interval].split("/")
-                direction = random.choice(possible_directions)
-                if direction == "a":
-                    ans = CHROMATICS[(root_id + INTERVALS[interval]) % len(CHROMATICS)]
-                else:
-                    ans = CHROMATICS[(root_id - INTERVALS[interval])]
-
-                guess = input(
-                    f'Root: {root} \nInterval: {interval}\nDirection: {"Ascending" if direction == "a" else "Descending"}\n'
-                )
-                if guess in ans:
-                    print("Correct!\n")
-                    if len(ans) > 1:
-                        print(f"Also correct: {[x for x in ans if x != guess]}")
-                    correct += 1
-                else:
-                    print(f"Wrong!\nCorrect answers were: {ans}")
-
-                inp = input("hit enter to continue \n")
-                if inp not in {""}:
-                    quit = True
-
-                os.system("cls" if os.name == "nt" else "clear")
-
-            elif self.mode == "Chord Spelling":
-                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
-
-            elif self.mode == "Guitar Triads":
-                root_id = random.choice(self.root_ids)
-                root = random.choice(
-                    [x for x in CHROMATICS[root_id] if x in self.roots]
-                )
-                low_string = random.choice(self.config["low_strings"])
-                inversion = random.choice(self.config["inversions"])
-                chord_type = random.choice(self.config["chord_types"])
-                chord_tab = self.get_chord_tab(
-                    low_string, inversion, chord_type, root_id
-                )
-                input(
-                    f"Low String: {low_string.upper()} \nInversion: {inversion}\nChord Name: {root + chord_type}\n\nhit enter for answer \n"
-                )
-
-                print(f"\n{chord_tab}\n")
-                inp = input("hit enter to continue \n")
-                os.system("cls" if os.name == "nt" else "clear")
-
+                self.correct += 1
             else:
-                raise NotImplementedError(f"theory mode: {self.mode} not implemented!")
+                feedback = f"Incorrect, the answer was {answer}"
 
-            total += 1
+        elif self.mode == "guitar_triads":
+            feedback = f"Answer was:\n{answer}"
 
-        print(f"Final Score: {100*(correct / total)}% correct")
+        self.total += 1
+        results["correct"] = self.correct
+        results["total"] = self.total
+        results["feedback"] = feedback
+        return results
 
-
-if __name__ == "__main__":
-    TheoryTeacher().run_cli()
+    def generate_guitar_triad_question(self):
+        root_id = random.choice(self.root_ids)
+        root = random.choice([x for x in CHROMATICS[root_id] if x in self.roots])
+        low_string = random.choice(self.config["low_strings"])
+        inversion = random.choice(self.config["inversions"])
+        chord_type = random.choice(self.config["chord_types"])
+        chord_tab = self.get_chord_tab(low_string, inversion, chord_type, root_id)
+        # display with + and ° notation for readability
+        chord_type = chord_type.replace("dim", "°").replace("aug", "+")
+        question_text = f"Low String: {low_string.upper()} \nInversion: {inversion}\nChord Name: {root + chord_type}"
+        return {"question": question_text, "answer": chord_tab}
