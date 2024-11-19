@@ -8,25 +8,27 @@ body {
     min-height: 100vh;
     margin: 0;
     padding: 0;
-    background-color: #f7f7f7;
+    background-color: #2e2e2e; /* Dark grey */
+    color: white; /* White text */
 }
 
 /* Header styles */
 header {
     margin-bottom: 20px;
     text-align: center;
+    color: white; /* White text */
 }
 
 /* Main container for flashcard */
 #flashcard-container {
-    border: 2px solid #ccc;
+    border: 2px solid #555; /* Slightly lighter grey for border contrast */
     padding: 20px;
     margin-bottom: 20px;
     width: 90%;
     max-width: 400px;
     text-align: center;
-    background-color: #fff;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #2e2e2e; /* Dark grey */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
 }
 
@@ -45,22 +47,27 @@ header {
     padding: 10px;
     margin-right: 10px;
     font-size: 16px;
-    border: 1px solid #ccc;
+    border: 1px solid #555;
     border-radius: 5px;
+    background-color: #444;
+    color: white;
 }
 
 #input-section button {
     padding: 10px 20px;
     font-size: 16px;
-    background-color: #4CAF50;
+    background: linear-gradient(135deg, #4CAF50, #3e8e41);
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 #input-section button:hover {
-    background-color: #45a049;
+    background: linear-gradient(135deg, #45a049, #3b7f3b);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
 }
 
 /* Navigation buttons */
@@ -76,15 +83,43 @@ header {
     padding: 10px;
     width: 48%;
     font-size: 16px;
-    background-color: #008CBA;
+    background: linear-gradient(135deg, #008CBA, #0079a8);
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 #navigation button:hover {
-    background-color: #007B9A;
+    background: linear-gradient(135deg, #007B9A, #006e88);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+/* Dropdown styles */
+select {
+    padding: 10px;
+    padding-right: 40px; /* Leave space for the arrow */
+    font-size: 16px;
+    background-color: #444;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 5px;
+    appearance: none; /* Remove default dropdown styles */
+    background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"%3E%3Cpath fill="%23ffffff" d="M2 0L0 2h4zm0 5L0 3h4z"/%3E%3C/svg%3E');
+    background-repeat: no-repeat;
+    background-position: right 10px center; /* Position the arrow */
+    background-size: 10px;
+    cursor: pointer;
+    text-overflow: ellipsis; /* Handle overflowing text gracefully */
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide overflowing text */
+}
+
+select:hover {
+    background-color: #555;
+    border-color: #666;
 }
 
 /* Footer styles for progress and score */
@@ -93,6 +128,7 @@ footer {
     width: 90%;
     max-width: 400px;
     font-size: 14px;
+    color: white;
 }
 
 /* Responsive design using media queries */
