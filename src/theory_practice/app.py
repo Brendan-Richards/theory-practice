@@ -46,5 +46,8 @@ def submit_answer():
     return jsonify(results)
 
 
-if __name__ == "__main__":
+def main():
     app.run(debug=True)
+
+if __name__ == "__main__":
+    main()
